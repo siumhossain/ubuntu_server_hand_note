@@ -219,3 +219,218 @@ find / -name "syslog"
 | Ctrl + k | Deletes characters from the cursor to the end of the line|
 | Ctrl + u | Deletes a full line |
 
+
+
+## Viewing disk usage
+```bash
+df -h 
+```
+## Ram check
+```bash
+free
+```
+## ssh connection
+
+```bash
+ssh ip_address
+```
+**For different username**
+```bash
+ssh name@ip_address
+```
+ssh command by default connect in port22
+For making specific port address 
+```bash
+ssh -p port_number name@ip_address
+```
+
+## Generating public and private keys
+```bash
+ssh-keygen
+```
+
+## Setting up a DHCP server for serving IP addresses
+
+> We can start it as soon as we've finished adding our configuration:`
+
+```bash
+sudo apt install isc-dhcp-server
+```
+---
+Now that you've installed the isc-dhcp-server package, you'll have a default
+configuration file for it at /etc/dhcp/dhcpd.conf . This file will contain some default
+configuration, with some example settings that are commented out. Feel free to take
+a look at this file to get an idea of some of the settings you can configure. We'll create
+our own dhcpd.conf file from scratch. So when you're done looking at it, copy the
+existing file with a new name so we can refer to it later if we ever need to:
+
+
+```bash
+sudo mv /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.orig
+```
+Now, we're ready to create our own dhcpd.conf file. Open /etc/dhcp/dhcpd.conf in
+your preferred text editor. Since the file no longer exists (we moved it), we should
+start with an empty file. Here's an example dhcpd.conf file that I will explain so
+that you understand how it works:
+
+```bash 
+cd /etc/dhcp/
+```
+```bash
+sudo nano dhcpd.conf
+```
+`
+default-lease-time 43200;
+max-lease-time 86400;
+option subnet-mask 255.255.255.0;
+option broadcast-address 192.168.1.255;
+option domain-name "local.lan";
+authoritative;
+subnet 192.168.1.0 netmask 255.255.255.0 {
+range 192.168.1.100 192.168.1.240;
+option routers 192.168.1.1;
+option domain-name-servers 192.168.1.1;
+}
+`
+
+```bash
+cd /etc/default/
+nano isc-dhcp-server
+```
+`change` `INTERFACESv4=""` to:
+`INTERFACESv4="enp0s3"`
+
+
+
+```bash
+sudo systemct1 start isc-dhcp-server
+```
+Configuring an IPv6 network is beyond the scope of this chapter, but the DHCP server package we've just installed also comes with an IPv6 equivalent. Let's stop and disable this service, since we won't be using it:
+
+Active and previous DHCP leases are stored in the /var/lib/dhcp/dhcpd.leases file,
+and a typical lease entry in that file would look similar to the following:
+
+`
+lease 192.168.1.138 {
+starts 0 2020/10/05 16:37:30;
+ends 0 2020/10/06 16:42:30;
+cltt 0 2020/20/06 16:37:30;
+binding state active;
+next binding state free;
+rewind binding state free;
+hardware ethernet 32:6e:92:01:1f:7f;
+}
+`
+
+
+## Configure DNS server
+
+To set up your very own DNS server, we'll ﬁrst need to install the
+Berkeley Internet Name Daemon (BIND) package on our server:
+
+
+
+```bash
+sudo apt install bind9
+```
+
+
+
+We'll conﬁgure bind with actual hosts later, but se ing up a caching name server is a good way to get started.
+
+
+
+open the file in editors 
+`/etc/bind/named.conf.options`
+
+
+
+`// forwarders {
+//
+0.0.0.0;
+// };`
+
+
+
+> Uncomment these lines 
+
+```
+```
+
+```bash
+forwarders {
+8.8.8.8;
+8.8.4.4;
+};
+```
+
+
+
+After you save the ﬁle, restart the bind9 service:
+
+```bash
+sudo systemctl restart bind9
+```
+
+
+
+To be sure that everything is running smoothly, check the status of the service:
+
+**It should report that it's `active (running) `.**
+
+
+
+### Setting up internal DNS and adding hosts
+
+
+
+edit this file `/etc/bind/named.conf.local`
+
+```bash
+zone "local.lan" IN {
+type master;
+file "/etc/bind/net.local.lan";
+};
+```
+
+
+
+`create a file `
+
+```bas
+touch /etc/bind/net.local.lan
+```
+
+And those line 
+
+```bash
+$TTL 1D
+@ IN SOA local.lan. hostmaster.local.lan. (
+202008161; serial
+8H ; refresh
+4H ; retry
+4W ; expire
+1D ) ; minimum
+IN A 192.168.1.1
+;
+@ IN NS hermes.local.lan.
+fileserv	IN A	192.168.1.3
+hermes		IN A	192.168.1.1
+mailserv	IN A	192.168.1.5
+mail		IN CNAME	mailserv.
+web01		IN A	192.168.1.7
+```
+
+```bash
+sudo systemctl restart bind9
+systemctl status bind9
+```
+
+
+
+```check```
+
+```bas
+dig www.google.com
+```
+
